@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 
 # 🔒 TrustNet — Real-Time Anomaly Detection for Import/Export Transactions
 
@@ -190,10 +189,10 @@ TrustNet propose une couche de détection légère, explicable et vérifiable.
 
 ---
 
-# _Built by SARA ACHAHBAR ]— Cybersecurityengeneering Student _
+# _Built by SARA ACHAHBAR — Cybersecurityengeneering Student _
 
 # TRUSTNET
 
 Real-time anomaly detection for import/export transactions | Isolation Forest + Business Rules + Blockchain + JWT Auth
 
-> > > > > > > 246807cb0bcf538c7158f041f1f05fc42e277b0a
+
