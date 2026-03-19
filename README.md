@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+
 # 🔒 TrustNet — Real-Time Anomaly Detection for Import/Export Transactions
 
 > Detecting atypical trade transactions using **Isolation Forest**, **business rules**, and **blockchain traceability** — inspired by the PortNet customs ecosystem.
@@ -52,6 +54,7 @@ Fichier CSV / Excel
 ## 🔍 Détection — Approche hybride
 
 ### 1. Isolation Forest (ML)
+
 Chaque transaction reçoit un **score d'anomalie statistique**.  
 L'algorithme détecte les transactions qui s'écartent du comportement habituel — sans jamais avoir été entraîné sur des exemples de fraude.
 
@@ -62,7 +65,9 @@ L'algorithme détecte les transactions qui s'écartent du comportement habituel 
 | Nouvel importateur (cold start) | Profil global pays × catégorie (±2σ) |
 
 ### 2. Règles métier
+
 Violations logiques que le ML seul ne détecte pas :
+
 - 🚫 Pays sous embargo (Iran, Syrie, Corée du Nord...)
 - 💰 Paiement CASH sur grosse transaction
 - ❌ Valeur ou quantité déclarée = 0
@@ -70,15 +75,16 @@ Violations logiques que le ML seul ne détecte pas :
 - 🔴 Combinaison (pays, catégorie) interdite
 
 ### 3. Score final TrustNet
+
 ```
 Score final = 50% × Score ML + 35% × Score règles + 15% × Nb explications
 ```
 
-| Score | Niveau |
-|-------|--------|
-| ≥ 60 | 🔴 Risque Élevé |
-| 30–60 | 🟠 Risque Moyen |
-| < 30 | 🟢 Risque Faible |
+| Score | Niveau           |
+| ----- | ---------------- |
+| ≥ 60  | 🔴 Risque Élevé  |
+| 30–60 | 🟠 Risque Moyen  |
+| < 30  | 🟢 Risque Faible |
 
 ---
 
@@ -136,33 +142,33 @@ Le dashboard Streamlit offre 3 vues :
 
 ## 🗂️ Format du fichier d'entrée
 
-| Colonne | Type | Exemple |
-|---------|------|---------|
-| Transaction_ID | string | TX001 |
-| Customer | string | Samsung |
-| Country | string | USA |
-| Category | string | Electronics |
-| Quantity | int | 12 |
-| Value | float | 145000 |
-| Weight | float | 420 |
-| Customs_Code | string | 8471.30 |
-| Payment_Terms | string | NET30 |
-| Date | date | 2024-01-05 |
-| Country_Origine | string | South Korea *(optionnel)* |
+| Colonne         | Type   | Exemple                   |
+| --------------- | ------ | ------------------------- |
+| Transaction_ID  | string | TX001                     |
+| Customer        | string | Samsung                   |
+| Country         | string | USA                       |
+| Category        | string | Electronics               |
+| Quantity        | int    | 12                        |
+| Value           | float  | 145000                    |
+| Weight          | float  | 420                       |
+| Customs_Code    | string | 8471.30                   |
+| Payment_Terms   | string | NET30                     |
+| Date            | date   | 2024-01-05                |
+| Country_Origine | string | South Korea _(optionnel)_ |
 
 ---
 
 ## 🛠️ Stack technique
 
-| Composant | Technologie |
-|-----------|-------------|
-| Anomaly Detection | scikit-learn — IsolationForest |
-| Business Rules | Python custom engine |
-| Explainability | Z-score + frequency analysis |
-| Blockchain | hashlib SHA-256 + cryptography RSA-PSS |
-| Dashboard | Streamlit |
-| QR Verification | qrcode |
-| Data | pandas, numpy |
+| Composant         | Technologie                            |
+| ----------------- | -------------------------------------- |
+| Anomaly Detection | scikit-learn — IsolationForest         |
+| Business Rules    | Python custom engine                   |
+| Explainability    | Z-score + frequency analysis           |
+| Blockchain        | hashlib SHA-256 + cryptography RSA-PSS |
+| Dashboard         | Streamlit                              |
+| QR Verification   | qrcode                                 |
+| Data              | pandas, numpy                          |
 
 ---
 
@@ -184,4 +190,10 @@ TrustNet propose une couche de détection légère, explicable et vérifiable.
 
 ---
 
-*Built by [Votre Nom] — Data Science & ML Engineering*
+# _Built by SARA ACHAHBAR ]— Cybersecurityengeneering Student _
+
+# TRUSTNET
+
+Real-time anomaly detection for import/export transactions | Isolation Forest + Business Rules + Blockchain + JWT Auth
+
+> > > > > > > 246807cb0bcf538c7158f041f1f05fc42e277b0a
