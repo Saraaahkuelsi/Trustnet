@@ -1,0 +1,197 @@
+import pandas as pd
+from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+
+
+import pandas as pd
+
+# Remplacer par le nom exact de ton fichier uploadé
+data = pd.read_csv("Imports_Exports_Dataset.csv")
+
+# Vérifier le chargement
+print(data.head())
+print(data.columns)
+print(f"Nombre de lignes : {len(data)}")
+
+
+import pandas as pd
+from sklearn.ensemble import IsolationForest
+
+# ------------------------------------------------------------
+# 1. CHARGEMENT ET FILTRAGE DES DONNÉES
+# ------------------------------------------------------------
+data = pd.read_csv("Imports_Exports_Dataset.csv")
+data = data[data["Import_Export"] == "Import"]
+
+# Conserver uniquement les champs utiles (Customer inclus)
+colonnes_utiles = [
+    "Transaction_ID",
+    "Country",
+    "Category",
+    "Quantity",
+    "Value",
+    "Weight",
+    "Product",
+    "Customs_Code",
+    "Invoice_Number",
+    "Payment_Terms",
+    "Date",
+    "Customer"
+]
+data = data[colonnes_utiles]
+
+# Calculer Unit_Value pour détecter les anomalies de prix
+data["Unit_Value"] = data["Value"] / data["Quantity"]
+
+# Créer un pseudo-identifiant par type produit et pays (utile pour profil global)
+data["Pseudo_Importer_ID"] = data["Country"] + "_" + data["Category"]
+
+# ------------------------------------------------------------
+# 2. PROFIL TYPE PORTNET (Référence globale)
+# ------------------------------------------------------------
+profil_type = data.groupby(["Country", "Category"]).agg({
+    "Quantity": ["mean", "std"],
+    "Value": ["mean", "std"],
+    "Weight": ["mean", "std"]
+}).reset_index()
+
+profil_type.columns = [
+    "Country", "Category",
+    "Quantity_mean", "Quantity_std",
+    "Value_mean", "Value_std",
+    "Weight_mean", "Weight_std"
+]
+
+# Intervalles ±2σ pour détection anomalies
+for col in ["Quantity", "Value", "Weight"]:
+    profil_type[f"{col}_min"] = (profil_type[f"{col}_mean"] - 2*profil_type[f"{col}_std"]).clip(lower=0)
+    profil_type[f"{col}_max"] = profil_type[f"{col}_mean"] + 2*profil_type[f"{col}_std"]
+
+print("✅ Profil type global :")
+print(profil_type.head())
+
+# ------------------------------------------------------------
+# 3. STATISTIQUES GLOBALES POUR IA
+# ------------------------------------------------------------
+numerical_features = ["Quantity", "Value", "Weight", "Unit_Value"]
+stats = {col: {"moyenne": data[col].mean(), "ecart_type": data[col].std()} for col in numerical_features}
+
+# ------------------------------------------------------------
+# 4. HISTORIQUE PAR CUSTOMER (Cold Start)
+# ------------------------------------------------------------
+MIN_HISTORIQUE = 5
+importateur_counts = data["Customer"].value_counts()
+profils_importateurs = data.groupby("Customer")[numerical_features].agg(["mean", "std"])
+
+# ------------------------------------------------------------
+# 5. FRÉQUENCES CATÉGORIELLES
+# ------------------------------------------------------------
+freq_pays = data["Country"].value_counts(normalize=True)
+freq_categorie = data["Category"].value_counts(normalize=True)
+freq_douane = data["Customs_Code"].value_counts(normalize=True)
+freq_paiement = data["Payment_Terms"].value_counts(normalize=True)
+
+# ------------------------------------------------------------
+# 6. IA : Isolation Forest pour score d'anomalie
+# ------------------------------------------------------------
+# Préparer dataset pour IA
+X_numerical = data[numerical_features]
+X_categorical = pd.get_dummies(data[["Country", "Category", "Customs_Code", "Payment_Terms"]])
+X_model = pd.concat([X_numerical, X_categorical], axis=1)
+
+iso_forest = IsolationForest(n_estimators=200, contamination=0.05, random_state=42)
+iso_forest.fit(X_model)
+
+data["Anomaly_Score"] = iso_forest.decision_function(X_model)
+data["Is_Anomaly"] = iso_forest.predict(X_model)
+data.to_csv("trustnet_final.csv", index=False)
+print("✅ Résultats TrustNet sauvegardés : trustnet_final.csv")
+
+# ------------------------------------------------------------
+# 7. NIVEAU DE RISQUE & SCORE DE CONFIANCE
+# ------------------------------------------------------------
+seuil_moyen = data["Anomaly_Score"].quantile(0.15)
+seuil_eleve = data["Anomaly_Score"].quantile(0.05)
+
+def niveau_risque(score):
+    if score <= seuil_eleve:
+        return "Risque Élevé 🔴"
+    elif score <= seuil_moyen:
+        return "Risque Moyen 🟠"
+    else:
+        return "Risque Faible 🟢"
+
+data["Niveau_Risque"] = data["Anomaly_Score"].apply(niveau_risque)
+data["Score_Confiance"] = (100 - data["Anomaly_Score"].rank(pct=True)*100).round(1)
+
+# ------------------------------------------------------------
+# 8. FONCTIONS D’EXPLICATION
+# ------------------------------------------------------------
+def expliquer_numerique(col, valeur, moyenne, ecart_type):
+    if ecart_type == 0 or pd.isna(ecart_type):
+        return None
+    z = (valeur - moyenne) / ecart_type
+    if z > 2.5:
+        return f"{col} est extrêmement élevé ({z:.1f}σ au-dessus de la normale)"
+    elif z < -2.5:
+        return f"{col} est extrêmement faible ({abs(z):.1f}σ en dessous de la normale)"
+    return None
+
+def expliquer_rarete(feature, valeur, table_freq):
+    p = table_freq.get(valeur, 0)
+    if p < 0.005:
+        return f"{feature} '{valeur}' apparaît dans seulement {p*100:.2f}% des transactions (extrêmement rare)"
+    elif p < 0.01:
+        return f"{feature} '{valeur}' est rare ({p*100:.2f}%)"
+    return None
+
+# ------------------------------------------------------------
+# 9. MOTEUR D’EXPLICATION TRUSTNET
+# ------------------------------------------------------------
+def trustnet_explain(row):
+    raisons = []
+    importateur = row["Customer"]
+    historique = importateur_counts.get(importateur, 0)
+
+    # Cas importateur nouveau (Cold Start)
+    if historique < MIN_HISTORIQUE:
+        raisons.append(f"Importateur nouveau ({historique} transactions) → évaluation globale")
+        for col in numerical_features:
+            msg = expliquer_numerique(col, row[col], stats[col]["moyenne"], stats[col]["ecart_type"])
+            if msg: raisons.append(msg)
+    else:
+        raisons.append(f"Importateur établi ({historique} transactions) → analyse comportementale")
+        for col in numerical_features:
+            imp_mean = profils_importateurs.loc[importateur, (col, "mean")]
+            imp_std = profils_importateurs.loc[importateur, (col, "std")]
+            msg = expliquer_numerique(col, row[col], imp_mean, imp_std)
+            if msg: raisons.append(msg + " par rapport au comportement typique")
+
+    # Rareté catégorielle
+    rarete_checks = [
+    ("Country", freq_pays),
+    ("Category", freq_categorie),
+    ("Customs_Code", freq_douane),
+    ("Payment_Terms", freq_paiement)
+]
+    for feature, table in rarete_checks:
+        msg = expliquer_rarete(feature, row[feature], table)
+        if msg: raisons.append(msg)
+
+    # Signaux financiers
+    if row["Unit_Value"] > stats["Unit_Value"]["moyenne"] + 3*stats["Unit_Value"]["ecart_type"]:
+        raisons.append("Suspicion de surfacturation (prix unitaire élevé)")
+    if row["Value"] > stats["Value"]["moyenne"] + 3*stats["Value"]["ecart_type"]:
+        raisons.append("Montant total anormal → risque potentiel de blanchiment")
+
+    if len(raisons) == 0:
+        raisons.append("Anomalie multivariée détectée par le modèle IA")
+
+    return "\n- ".join(raisons)
+
+data["Explication"] = data.apply(trustnet_explain, axis=1)
+data.to_csv("trustnet_final.csv", index=False)
+print("✅ Résultats TrustNet sauvegardés : trustnet_final.csv")

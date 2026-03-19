@@ -1,0 +1,31 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "username": "admin",
+      "email": "admin1@trustnet..com",
+      "password_hash": "$2b$12$hxO2ZI1QbF/M.tetnAfGmeFARWlxpRdI1aUPR2dslxAb8h5gxeFm2",
+      "role": "admin",
+      "full_name": "Administrateur TrustNet",
+      "active": true
+    },
+    {
+      "id": "2",
+      "username": "analyste1",
+      "email": "analyste@trustnet.com",
+      "password_hash": "$2b$12$zaISJBH1JeJ2/yZYCekYM.oMoocw2dWYsqzCXjccf.bzKrMW3Go72",
+      "role": "analyste",
+      "full_name": "Analyste Commercial",
+      "active": true
+    },
+    {
+      "id": "3",
+      "username": "auditeur1",
+      "email": "auditeur@trustnet.com",
+      "password_hash": "$2b$12$weksF1yr2ciKpALun27dmOOsxwDs.N6I.CaJV0frWBMkY4q5U0f8m",
+      "role": "auditeur",
+      "full_name": "Auditeur Douanier",
+      "active": true
+    }
+  ]
+}
