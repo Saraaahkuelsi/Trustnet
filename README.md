@@ -1,4 +1,3 @@
-
 # 🔒 TrustNet — Real-Time Anomaly Detection for Import/Export Transactions
 
 > Detecting atypical trade transactions using **Isolation Forest**, **business rules**, and **blockchain traceability** — inspired by the PortNet customs ecosystem.
@@ -189,10 +188,8 @@ TrustNet propose une couche de détection légère, explicable et vérifiable.
 
 ---
 
-# _Built by SARA ACHAHBAR — Cybersecurityengeneering Student _
+# _Built by SARA ACHAHBAR — Cybersecurity engineering Student _
 
 # TRUSTNET
 
 Real-time anomaly detection for import/export transactions | Isolation Forest + Business Rules + Blockchain + JWT Auth
-
-
