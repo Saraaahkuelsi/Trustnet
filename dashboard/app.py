@@ -83,7 +83,8 @@ def load_from_db():
         "risk_level":     "Risk_Level",
         "explanation":    "Explanation_Detail",
         "violations":     "Rule_Violations",
-        "fingerprint":    "Fingerprint_Hash"
+        "fingerprint":    "Fingerprint_Hash",
+        "country_origine": "Country_Origine",
     })
     df_db["Explanation_Detail"] = df_db["Explanation_Detail"].apply(
         lambda x: x.split(" | ") if isinstance(x, str) and x else []

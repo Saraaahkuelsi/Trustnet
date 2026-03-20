@@ -65,16 +65,17 @@ def save_transaction(row):
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO transactions (
-            transaction_id, customer, country, category,
+            transaction_id, customer, country, category, country_origine,
             quantity, value, weight, unit_value,
             payment_terms, date, trustnet_score, risk_level,
             explanation, violations, fingerprint, analyzed_at
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """, (
         str(row.get("Transaction_ID", "")),
         str(row.get("Customer", "")),
         str(row.get("Country", "")),
         str(row.get("Category", "")),
+        str(row.get("Country_Origine", "Unknown")),
         float(row.get("Quantity", 0)),
         float(row.get("Value", 0)),
         float(row.get("Weight", 0)),
@@ -90,7 +91,6 @@ def save_transaction(row):
     ))
     conn.commit()
     conn.close()
-
 
 def get_all_transactions():
     conn = get_connection()
