@@ -1,25 +1,43 @@
-import sqlite3
 import os
 import datetime
+from dotenv import load_dotenv
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH  = os.path.join(BASE_DIR, "output", "trustnet.db")
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
 
-#connection 
+# Essaie PostgreSQL (Supabase) sinon SQLite en fallback
+try:
+    import streamlit as st
+    SUPABASE_URL = st.secrets.get("SUPABASE_URL") or os.environ.get("SUPABASE_URL")
+except Exception:
+    SUPABASE_URL = os.environ.get("SUPABASE_URL")
+
+if SUPABASE_URL:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    DB_TYPE = "postgres"
+else:
+    import sqlite3
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    DB_PATH  = os.path.join(BASE_DIR, "output", "trustnet.db")
+    DB_TYPE = "sqlite"
+
+
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    if DB_TYPE == "postgres":
+        conn = psycopg2.connect(SUPABASE_URL)
+        return conn
+    else:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
 
-#craete the db 
 
 def init_database():
     conn = get_connection()
-    
-    # Table transactions
-    conn.execute("""
+    cursor = conn.cursor()
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS transactions (
-            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            id              SERIAL PRIMARY KEY,
             transaction_id  TEXT,
             customer        TEXT,
             country         TEXT,
@@ -38,36 +56,20 @@ def init_database():
             analyzed_at     TEXT
         )
     """)
-    
-    # Table users
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            username      TEXT UNIQUE,
-            full_name     TEXT,
-            email         TEXT,
-            password_hash TEXT,
-            role          TEXT,
-            active        INTEGER DEFAULT 1,
-            created_at    TEXT
-        )
-    """)
-    
     conn.commit()
     conn.close()
-
-  #save transactions  
 
 
 def save_transaction(row):
     conn = get_connection()
-    conn.execute("""
+    cursor = conn.cursor()
+    cursor.execute("""
         INSERT INTO transactions (
             transaction_id, customer, country, category,
             quantity, value, weight, unit_value,
             payment_terms, date, trustnet_score, risk_level,
             explanation, violations, fingerprint, analyzed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """, (
         str(row.get("Transaction_ID", "")),
         str(row.get("Customer", "")),
@@ -81,8 +83,8 @@ def save_transaction(row):
         str(row.get("Date", "")),
         float(row.get("TrustNet_Score", 0)),
         str(row.get("Risk_Level", "")),
-        " | ".join(row.get("Explanation_Detail", [])),
-        " | ".join(row.get("Rule_Violations", [])),
+        " | ".join(row.get("Explanation_Detail", []) if isinstance(row.get("Explanation_Detail"), list) else []),
+        " | ".join(row.get("Rule_Violations", []) if isinstance(row.get("Rule_Violations"), list) else []),
         str(row.get("Fingerprint_Hash", "")),
         datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     ))
@@ -92,106 +94,48 @@ def save_transaction(row):
 
 def get_all_transactions():
     conn = get_connection()
-    
-    cursor = conn.execute("""
+    if DB_TYPE == "postgres":
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+    else:
+        cursor = conn.cursor()
+    cursor.execute("""
         SELECT * FROM transactions
         ORDER BY analyzed_at DESC
     """)
     rows = cursor.fetchall()
     conn.close()
-    return rows
+    return [dict(r) for r in rows]
 
 
 def get_transactions_by_risk(risk_level):
     conn = get_connection()
-    # Getting only transactions with certain level of risk
-    cursor = conn.execute("""
+    if DB_TYPE == "postgres":
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+    else:
+        cursor = conn.cursor()
+    cursor.execute("""
         SELECT * FROM transactions
-        WHERE risk_level = ?
+        WHERE risk_level = %s
         ORDER BY trustnet_score DESC
     """, (risk_level,))
     rows = cursor.fetchall()
     conn.close()
-    return rows
+    return [dict(r) for r in rows]
 
 
 def search_transactions(keyword):
     conn = get_connection()
-    # Serach by keyword
-    cursor = conn.execute("""
+    if DB_TYPE == "postgres":
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+    else:
+        cursor = conn.cursor()
+    cursor.execute("""
         SELECT * FROM transactions
-        WHERE customer LIKE ?
-        OR country LIKE ?
-        OR transaction_id LIKE ?
+        WHERE customer ILIKE %s
+        OR country ILIKE %s
+        OR transaction_id ILIKE %s
         ORDER BY analyzed_at DESC
     """, (f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
     rows = cursor.fetchall()
     conn.close()
-    return rows
-# Users functions
-
-def init_default_users():
-    import bcrypt
-    conn = get_connection()
-    
-    # Vérifier si des utilisateurs existent déjà
-    cursor = conn.execute("SELECT COUNT(*) FROM users")
-    count = cursor.fetchone()[0]
-    
-    if count == 0:
-        # Créer les 3 utilisateurs par défaut
-        default_users = [
-            ("admin",     "Administrateur TrustNet", "admin@trustnet.com",     "admin",     "trustnet2024"),
-            ("analyste1", "Analyste Commercial",     "analyste@trustnet.com",  "analyste",  "trustnet2024"),
-            ("auditeur1", "Auditeur Douanier",       "auditeur@trustnet.com",  "auditeur",  "trustnet2024"),
-        ]
-        
-        for username, full_name, email, role, password in default_users:
-            hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt(12)).decode()
-            conn.execute("""
-                INSERT INTO users (username, full_name, email, password_hash, role, active, created_at)
-                VALUES (?, ?, ?, ?, ?, 1, ?)
-            """, (username, full_name, email, hashed, role, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-        
-        conn.commit()
-        print(" Utilisateurs par défaut créés dans la base")
-    
-    conn.close()
-
-
-
-def load_transactions_as_dataframe():
-    import pandas as pd
-    conn = get_connection()
-    cursor = conn.execute("SELECT * FROM transactions ORDER BY analyzed_at DESC")
-    rows = cursor.fetchall()
-    conn.close()
-    if not rows:
-        return None
-    df = pd.DataFrame([dict(r) for r in rows])
-    # Renommer les colonnes pour correspondre au pipeline
-    df = df.rename(columns={
-        "transaction_id": "Transaction_ID",
-        "customer":       "Customer",
-        "country":        "Country",
-        "category":       "Category",
-        "quantity":       "Quantity",
-        "value":          "Value",
-        "weight":         "Weight",
-        "unit_value":     "Unit_Value",
-        "payment_terms":  "Payment_Terms",
-        "date":           "Date",
-        "trustnet_score": "TrustNet_Score",
-        "risk_level":     "Risk_Level",
-        "explanation":    "Explanation_Detail",
-        "violations":     "Rule_Violations",
-        "fingerprint":    "Fingerprint_Hash"
-    })
-    # Reconvertir les explications en listes
-    df["Explanation_Detail"] = df["Explanation_Detail"].apply(
-        lambda x: x.split(" | ") if isinstance(x, str) and x else []
-    )
-    df["Rule_Violations"] = df["Rule_Violations"].apply(
-        lambda x: x.split(" | ") if isinstance(x, str) and x else []
-    )
-    return df
+    return [dict(r) for r in rows]
