@@ -111,7 +111,7 @@ def _tab_recherche(df, user):
                 st.write(f"🌍 {tx['Country']} | 📦 {tx['Category']}")
                 st.write(f"Qty: {tx['Quantity']} | Val: {tx['Value']:,.0f} | Poids: {tx['Weight']:,.0f} kg")
                 st.write(f"Prix unit.: {tx['Unit_Value']:,.1f} | Paiement: {tx['Payment_Terms']}")
-                st.write(f"Origine: {tx.get('Country_Origine', 'N/A')}")
+                st.write(f"Origine: {tx['Country_Origine'] if 'Country_Origine' in tx.index else 'N/A'}")
                 if "Fingerprint_Hash" in tx.index and pd.notna(tx["Fingerprint_Hash"]):
                     st.code(f"SHA-256: {str(tx['Fingerprint_Hash'])[:32]}...", language=None)
 
