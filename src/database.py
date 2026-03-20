@@ -7,7 +7,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(os.path.abs
 # Essaie PostgreSQL (Supabase) sinon SQLite en fallback
 try:
     import streamlit as st
-    SUPABASE_URL = st.secrets.get("SUPABASE_URL") or os.environ.get("SUPABASE_URL")
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
 except Exception:
     SUPABASE_URL = os.environ.get("SUPABASE_URL")
 

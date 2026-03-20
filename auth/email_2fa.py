@@ -26,8 +26,8 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(os.path.abs
 
 try:
     import streamlit as st
-    GMAIL_ADDRESS      = st.secrets.get("TRUSTNET_GMAIL") or os.environ.get("TRUSTNET_GMAIL")
-    GMAIL_APP_PASSWORD = st.secrets.get("TRUSTNET_GMAIL_PWD") or os.environ.get("TRUSTNET_GMAIL_PWD")
+    GMAIL_ADDRESS      = st.secrets["TRUSTNET_GMAIL"]
+    GMAIL_APP_PASSWORD = st.secrets["TRUSTNET_GMAIL_PWD"]
 except Exception:
     GMAIL_ADDRESS      = os.environ.get("TRUSTNET_GMAIL")
     GMAIL_APP_PASSWORD = os.environ.get("TRUSTNET_GMAIL_PWD")
