@@ -102,6 +102,16 @@ Si une donnée est modifiée après validation → le hash change → fraude dé
 
 ---
 
+## 📂 Dataset de test
+
+Un dataset de démonstration est disponible dans `data/sample_transactions.csv` (50 transactions).
+
+Pour tester avec un dataset plus réaliste, vous pouvez utiliser ce dataset Kaggle de 15 000 transactions import/export :
+
+🔗 [Import-Export 15000 Transactions — Kaggle](https://www.kaggle.com/datasets/chakilamvishwas/imports-exports-15000)
+
+Colonnes compatibles avec TrustNet : `Transaction_ID`, `Customer`, `Country`, `Category`, `Quantity`, `Value`, `Weight`, `Customs_Code`, `Payment_Terms`, `Date`
+
 ## 📁 Structure du projet
 
 ```
