@@ -63,7 +63,6 @@ def get_current_user():
 
 
 def load_from_db():
-    """Fonction commune pour charger les données depuis la base."""
     from src.database import get_all_transactions
     rows = get_all_transactions()
     if not rows:
@@ -137,29 +136,14 @@ def page_login():
                 return
 
             st.session_state["login_attempts"] = 0
-
-            if user["role"] == "admin":
-                code = generate_2fa_code()
-                sent = send_2fa_email(user["email"], user["full_name"], code)
-                if not sent:
-                    st.error("❌ Impossible d'envoyer le code de vérification. Réessayez.")
-                    return
-                st.session_state.update({
-                    "2fa_code": code,
-                    "2fa_time": datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
-                    "2fa_user": user,
-                    "2fa_pending": True
-                })
-                st.rerun()
-            else:
-                token = create_token(user["id"], user["username"], user["role"], user["email"])
-                st.session_state["jwt_token"] = token
-                st.rerun()
+            token = create_token(user["id"], user["username"], user["role"], user["email"])
+            st.session_state["jwt_token"] = token
+            st.rerun()
 
         st.markdown("""
         <div style="background:#0D1220;border:1px solid #1A2540;border-radius:8px;padding:12px;margin-top:12px;">
             <p style="color:#FF8C00;font-size:11px;margin:0 0 6px 0;">⚠️ Environnement de démonstration — données simulées</p>
-            <p style="color:#4A6090;font-size:11px;margin:2px 0;">👑 <b style="color:#E0E6FF">admin</b> / trustnet2024 — accès complet + 2FA</p>
+            <p style="color:#4A6090;font-size:11px;margin:2px 0;">👑 <b style="color:#E0E6FF">admin</b> / trustnet2024 — accès complet</p>
             <p style="color:#4A6090;font-size:11px;margin:2px 0;">🔍 <b style="color:#E0E6FF">analyste1</b> / trustnet2024 — consultation</p>
             <p style="color:#4A6090;font-size:11px;margin:2px 0;">⚖️ <b style="color:#E0E6FF">auditeur1</b> / trustnet2024 — alertes seulement</p>
         </div>""", unsafe_allow_html=True)
@@ -238,7 +222,6 @@ def main():
 
     filepath = None
 
-    # Auditeur — charge automatiquement l'historique depuis la base
     if user["role"] == "auditeur":
         if "results" not in st.session_state:
             df_db = load_from_db()
